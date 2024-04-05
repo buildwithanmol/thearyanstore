@@ -1,0 +1,166 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum VariationType {
+    COLOR 
+    IMAGE
+}
+
+enum ReturnStatus {
+  APPROVED
+  PENDING
+  REJECTED
+}
+
+enum TrackingType {
+  ORDER
+  RETURN
+}
+
+model User {
+  id String @id @default(uuid()) 
+  name String 
+  email String 
+  phone Int
+  shipping_address String? @db.Text
+  billing_address String? @db.Text
+  gst_no String?
+  profileImg String? @db.Text
+
+  carts Cart[]
+  orders Order[]
+  reviews Review[]
+  returns Return[]
+  tracking Tracking[]
+}
+
+model Order {
+  id String @id @default(uuid()) 
+  amountPaid Decimal
+  signatureId String 
+  paymentId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  trackingCode String @default(uuid())
+  
+  productId String
+  userId String 
+  user User @relation(references: [id], fields: [userId], onDelete: Cascade)
+  trackingId String
+  tracking Tracking @relation(references: [id], fields: [trackingId], onDelete: Cascade)
+}
+
+model Return {
+  id String @id @default(uuid()) 
+  image Image[]
+  reason String @db.Text
+  returnStatus ReturnStatus @default(PENDING)
+  trackingCode String @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String 
+  user User @relation(references: [id], fields: [userId], onDelete: Cascade) 
+  trackingId String 
+  tracking Tracking @relation(references: [id], fields: [trackingId], onDelete: Cascade)
+}
+
+model Review {
+  id String @id @default(uuid())
+  productId String 
+  content String @db.Text
+  rating Decimal
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  userId String 
+  user User @relation(references: [id], fields: [userId], onDelete: Cascade)
+}
+
+model Cart {
+  id String @id @default(uuid())
+  productId String 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String
+  user User @relation(references: [id], fields: [userId]) 
+}
+
+model Tracking {
+  id String @id @default(uuid())
+  type TrackingType
+  trackingCode String
+  trackingStatus TrackingStatus[]
+  isDelivered Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  order Order[]
+  return Return[]
+
+  userId String 
+  user User @relation(references: [id], fields: [userId], onDelete: Cascade)
+}
+
+model TrackingStatus {
+  id String @id @default(uuid())
+  status String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  trackingId String
+  tracking Tracking @relation(references: [id], fields: [trackingId], onDelete: Cascade)
+}
+
+model Product {
+  id String @id @default(uuid()) 
+  title String 
+  description String 
+  price Decimal
+  specification String
+  variationExists Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  isReturnable Boolean @default(false)
+
+  image Image[]
+  variation Variation[]
+}
+
+model Variation {
+  id String @id @default(uuid())
+  title String 
+  price Decimal
+  type VariationType
+  variantName String
+  variantUrlOrColor String @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  image Image[]
+  productId String
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model Image {
+  id String @id @default(uuid())
+  url String @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  variationId String
+  variation Variation @relation(fields: [variationId], references: [id], onDelete: Cascade)
+
+  returnId String
+  return Return @relation(references: [id], fields: [returnId], onDelete: Cascade)
+
+  productId String
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
